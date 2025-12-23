@@ -99,7 +99,7 @@ function SignInScreen() {
   return (
     <ScrollView style={styles.authContainer} contentContainerStyle={styles.authContent}>
       <View style={styles.authHeader}>
-        <Text style={styles.authTitle}>Welcome to Savorly</Text>
+        <Text style={styles.authTitle}>Welcome to Savorly!</Text>
         <Text style={styles.authSubtitle}>Eat better, spend less, waste none.</Text>
       </View>
 
@@ -145,7 +145,7 @@ function SignInScreen() {
           style={styles.secondaryButton}
           onPress={handleCalNetSignIn}
               >
-          <Text style={styles.secondaryButtonText}>Sign In with CalNet</Text>
+          <Text style={styles.secondaryButtonText}>Restaurant Login</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1202,39 +1202,25 @@ function AppTabs() {
         component={HomeNavigator}
         options={{
           tabBarLabel: 'Browse',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>🏠</Text>
-          ),
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>🏠</Text>,
         }}
       />
-      <Tab.Screen
-        name="Create"
-        component={CreateListingScreen}
-        options={{
-          tabBarLabel: 'Create',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>➕</Text>
-          ),
-        }}
-      />
+
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
         options={{
           tabBarLabel: 'Messages',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>💬</Text>
-          ),
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>💬</Text>,
         }}
       />
+
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>👤</Text>
-          ),
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
         }}
       />
     </Tab.Navigator>
