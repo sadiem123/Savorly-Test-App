@@ -73,10 +73,18 @@ function SignInScreen() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [emailError, setEmailError] = React.useState('');
 
   const handleSignIn = async () => {
+    setEmailError(''); // Clear any previous error
+
     if (!email || !password) {
       Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+
+    if (!email.endsWith('@berkeley.edu')) {
+      setEmailError('User must log in with a valid Berkeley email');
       return;
     }
 
@@ -111,10 +119,14 @@ function SignInScreen() {
             placeholder="your.email@berkeley.edu"
             placeholderTextColor="#999"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (emailError) setEmailError(''); // Clear error on typing
+            }}
             autoCapitalize="none"
             keyboardType="email-address"
           />
+          {emailError ? <Text style={styles.errorText}>⚠️ {emailError}</Text> : null}
         </View>
 
         <View style={styles.inputContainer}>
@@ -148,13 +160,6 @@ function SignInScreen() {
           <Text style={styles.secondaryButtonText}>Restaurant Login</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.navigate('ForgotPassword')}
-              >
-          <Text style={styles.linkText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
         <View style={styles.authDivider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>OR</Text>
@@ -175,18 +180,20 @@ function SignInScreen() {
 function SignUpScreen() {
   const navigation = useNavigation();
   const { signUp } = useAuth();
+  
   const [step, setStep] = React.useState(1);
+  const [displayName, setDisplayName] = React.useState(''); // NEW STATE
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [isSNAPRecipient, setIsSNAPRecipient] = React.useState(false);
-  const [year, setYear] = React.useState('');
-  const [name, setName] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [emailError, setEmailError] = React.useState('');
+  // ... other states (SNAP, year, name)
 
   const handleNext = () => {
     if (step === 1) {
-      if (!email || !password || !confirmPassword) {
+      // Updated validation to include Display Name
+      if (!displayName || !email || !password || !confirmPassword) {
         Alert.alert('Error', 'Please fill in all fields');
         return;
       }
@@ -194,7 +201,8 @@ function SignUpScreen() {
         Alert.alert('Error', 'Passwords do not match');
         return;
       }
-      setStep(2);
+      // Submit immediately after the user has filled all first-step fields
+      handleSignUp();
     } else if (step === 2) {
       setStep(3);
     } else if (step === 3) {
@@ -203,35 +211,55 @@ function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
-    if (!name) {
-      Alert.alert('Error', 'Please enter your name');
+    setEmailError(''); // Clear any previous error
+
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+
+    if (!email.endsWith('@berkeley.edu')) {
+      setEmailError('User must log in with a valid Berkeley email');
       return;
     }
 
     setLoading(true);
     try {
+      // Pass displayName as `name` so ProfileScreen (which expects `name`) and
+      // other parts of the app will show the chosen display name.
       await signUp(email, password, {
-        name,
-        isSNAPRecipient,
-        year,
+        name: displayName || '',
+        displayName: displayName || '',
       });
-      // Navigation handled by AuthProvider
+      // Navigation handled by auth state change
     } catch (error) {
-      Alert.alert('Sign Up Failed', error.message || 'Could not create account');
+      Alert.alert('Sign Up Failed', error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Step 1 UI Update ---
   return (
     <ScrollView style={styles.authContainer} contentContainerStyle={styles.authContent}>
-      <View style={styles.authHeader}>
+      <View style={styles.createHeader}>
         <Text style={styles.authTitle}>Create Account</Text>
-        <Text style={styles.authSubtitle}>Step {step} of 3</Text>
       </View>
 
       {step === 1 && (
         <View style={styles.authForm}>
+          {/* NEW DISPLAY NAME FIELD */}
+          <View style={[styles.inputContainer, styles.firstInput]}>
+            <Text style={styles.inputLabel}>Display Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="How others will see you (e.g. Oski1868)"
+              placeholderTextColor="#999"
+              value={displayName}
+              onChangeText={setDisplayName}
+            />
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Berkeley Email</Text>
             <TextInput
@@ -239,23 +267,26 @@ function SignUpScreen() {
               placeholder="your.email@berkeley.edu"
               placeholderTextColor="#999"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError(''); // Clear error on typing
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-        </View>
-
+            {emailError ? <Text style={styles.errorText}>⚠️ {emailError}</Text> : null}
+          </View>
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Create a password"
+              placeholder="Enter your password"
               placeholderTextColor="#999"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
-            </View>
+          </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Confirm Password</Text>
@@ -268,142 +299,21 @@ function SignUpScreen() {
               secureTextEntry
             />
           </View>
-      </View>
-      )}
 
-      {step === 2 && (
-        <View style={styles.authForm}>
-          <Text style={styles.sectionTitle}>Tell us about yourself</Text>
-          
           <TouchableOpacity
-            style={[styles.toggleButton, isSNAPRecipient && styles.toggleButtonActive]}
-            onPress={() => setIsSNAPRecipient(!isSNAPRecipient)}
+            style={[styles.primaryButton, loading && styles.buttonDisabled]}
+            onPress={handleNext}
+            disabled={loading}
           >
-            <Text style={[styles.toggleButtonText, isSNAPRecipient && styles.toggleButtonTextActive]}>
-              Are you a SNAP recipient?
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Sign Up</Text>
+            )}
           </TouchableOpacity>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Year</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Freshman, Sophomore, Junior, Senior, Graduate"
-              placeholderTextColor="#999"
-              value={year}
-              onChangeText={setYear}
-            />
-              </View>
-              </View>
-      )}
-
-      {step === 3 && (
-        <View style={styles.authForm}>
-          <Text style={styles.sectionTitle}>Create Your Profile</Text>
-          
-          <TouchableOpacity style={styles.imageUploadButton}>
-            <Text style={styles.imageUploadText}>📷 Upload Profile Image</Text>
-          </TouchableOpacity>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your name"
-              placeholderTextColor="#999"
-              value={name}
-              onChangeText={setName}
-            />
-            </View>
-            </View>
-      )}
-
-      <View style={styles.authForm}>
-        <TouchableOpacity
-          style={[styles.primaryButton, loading && styles.buttonDisabled]}
-          onPress={handleNext}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              {step === 3 ? 'Complete Sign Up' : 'Next'}
-            </Text>
-          )}
-          </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.linkText}>Back to Sign In</Text>
-        </TouchableOpacity>
-      </View>
-      </ScrollView>
-  );
-}
-
-function ForgotPasswordScreen() {
-  const navigation = useNavigation();
-  const [email, setEmail] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-
-  const handleReset = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-
-    setLoading(true);
-    // TODO: Implement password reset
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert('Success', 'Password reset email sent!');
-      navigation.goBack();
-    }, 1000);
-  };
-
-  return (
-    <ScrollView style={styles.authContainer} contentContainerStyle={styles.authContent}>
-      <View style={styles.authHeader}>
-        <Text style={styles.authTitle}>Reset Password</Text>
-        <Text style={styles.authSubtitle}>Enter your email to receive a reset link</Text>
-    </View>
-
-      <View style={styles.authForm}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="your.email@berkeley.edu"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
         </View>
-
-        <TouchableOpacity
-          style={[styles.primaryButton, loading && styles.buttonDisabled]}
-          onPress={handleReset}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Send Reset Link</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.linkText}>Back to Sign In</Text>
-        </TouchableOpacity>
-      </View>
+      )}
+      {/* ... Steps 2 and 3 ... */}
     </ScrollView>
   );
 }
@@ -416,12 +326,12 @@ function HomeScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedFilters, setSelectedFilters] = React.useState([]);
-  const [viewMode, setViewMode] = React.useState('list'); // 'list' or 'map'
 
-  // Sample listings data
-  const listings = [
+  // MEALS listings
+  const mealsListings = [
     {
       id: 1,
+      type: 'meal',
       restaurant: 'Campus Cafe',
       name: 'Veggie Wrap',
       price: 8.99,
@@ -434,6 +344,7 @@ function HomeScreen() {
     },
     {
       id: 2,
+      type: 'meal',
       restaurant: 'Pizza Palace',
       name: 'Large Pizza',
       price: 18.99,
@@ -446,6 +357,7 @@ function HomeScreen() {
     },
     {
       id: 3,
+      type: 'meal',
       restaurant: 'Green Bowl',
       name: 'Acai Bowl',
       price: 7.99,
@@ -458,7 +370,37 @@ function HomeScreen() {
     },
   ];
 
-  const filters = ['Vegetarian', 'Gluten Free', 'Vegan', 'Serves 4+'];
+  // MARKET listings
+  const marketListings = [
+    {
+      id: 101,
+      type: 'market',
+      restaurant: 'Campus Market',
+      name: 'Bag of Apples',
+      price: 6.99,
+      discountPrice: 3.99,
+      category: 'Produce',
+      dietaryTags: ['Vegan', 'Gluten Free'],
+      serves: 4,
+      availableUntil: '6:00 PM',
+      imageUrl: null,
+    },
+    {
+      id: 102,
+      type: 'market',
+      restaurant: 'Campus Market',
+      name: 'Whole Wheat Bread',
+      price: 5.49,
+      discountPrice: 2.99,
+      category: 'Bakery',
+      dietaryTags: ['Vegetarian'],
+      serves: 2,
+      availableUntil: '7:00 PM',
+      imageUrl: null,
+    },
+  ];
+
+  const filters = ['Meals', 'Market', 'Vegetarian', 'Gluten Free', 'Vegan', 'Serves 4+'];
 
   const toggleFilter = (filter) => {
     if (selectedFilters.includes(filter)) {
@@ -468,43 +410,44 @@ function HomeScreen() {
     }
   };
 
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         listing.restaurant.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilters = selectedFilters.length === 0 || 
-                          selectedFilters.some(filter => listing.dietaryTags.includes(filter)) ||
-                          (selectedFilters.includes('Serves 4+') && listing.serves >= 4);
-    return matchesSearch && matchesFilters;
+  const filteredListings = [...mealsListings, ...marketListings].filter(listing => {
+    const matchesSearch =
+      listing.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.restaurant.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Check type filters (Meals/Market)
+    const hasMealsFilter = selectedFilters.includes('Meals');
+    const hasMarketFilter = selectedFilters.includes('Market');
+    const matchesType =
+      (!hasMealsFilter && !hasMarketFilter) || // No type filters selected = show all
+      (hasMealsFilter && listing.type === 'meal') ||
+      (hasMarketFilter && listing.type === 'market');
+
+    // Check dietary filters
+    const dietaryFilters = selectedFilters.filter(f =>
+      ['Vegetarian', 'Gluten Free', 'Vegan'].includes(f)
+    );
+    const matchesDietary =
+      dietaryFilters.length === 0 ||
+      dietaryFilters.some(filter => listing.dietaryTags.includes(filter));
+
+    // Check serves filter
+    const matchesServes =
+      !selectedFilters.includes('Serves 4+') || listing.serves >= 4;
+
+    return matchesSearch && matchesType && matchesDietary && matchesServes;
   });
 
   return (
     <View style={styles.homeContainer}>
       <View style={styles.homeHeader}>
         <Text style={styles.homeTitle}>Browse Food</Text>
-        <View style={styles.viewModeToggle}>
-          <TouchableOpacity
-            style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
-            onPress={() => setViewMode('list')}
-          >
-            <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>
-              List
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.viewModeButton, viewMode === 'map' && styles.viewModeButtonActive]}
-            onPress={() => setViewMode('map')}
-          >
-            <Text style={[styles.viewModeText, viewMode === 'map' && styles.viewModeTextActive]}>
-              Map
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       <View style={styles.searchBarContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search restaurants or menu items..."
+          placeholder="Search restaurants or items..."
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -539,44 +482,45 @@ function HomeScreen() {
         ))}
       </ScrollView>
 
-      {viewMode === 'list' ? (
-        <ScrollView style={styles.listingsContainer} showsVerticalScrollIndicator={false}>
-          {filteredListings.map((listing) => (
-            <TouchableOpacity
-              key={listing.id}
-              style={styles.listingCard}
-              onPress={() => navigation.navigate('ListingDetail', { listingId: listing.id })}
-            >
-              <View style={styles.listingImage}>
-                <Text style={styles.listingImagePlaceholder}>🍽️</Text>
+      <ScrollView style={styles.listingsContainer} showsVerticalScrollIndicator={false}>
+        {filteredListings.map((listing) => (
+          <TouchableOpacity
+            key={listing.id}
+            style={styles.listingCard}
+            onPress={() =>
+              navigation.navigate('ListingDetail', { listingId: listing.id })
+            }
+          >
+            <View style={styles.listingImage}>
+              <Text style={styles.listingImagePlaceholder}>🍽️</Text>
+            </View>
+
+            <View style={styles.listingInfo}>
+              <Text style={styles.listingName}>{listing.name}</Text>
+              <Text style={styles.listingRestaurant}>{listing.restaurant}</Text>
+
+              <View style={styles.listingTags}>
+                {listing.dietaryTags.map((tag, idx) => (
+                  <View key={idx} style={styles.listingTag}>
+                    <Text style={styles.listingTagText}>{tag}</Text>
                   </View>
-              <View style={styles.listingInfo}>
-                <Text style={styles.listingName}>{listing.name}</Text>
-                <Text style={styles.listingRestaurant}>{listing.restaurant}</Text>
-                <View style={styles.listingTags}>
-                  {listing.dietaryTags.map((tag, idx) => (
-                    <View key={idx} style={styles.listingTag}>
-                      <Text style={styles.listingTagText}>{tag}</Text>
-                </View>
-                  ))}
-                </View>
-                <View style={styles.listingFooter}>
-                  <View style={styles.listingPrice}>
-                    <Text style={styles.listingOldPrice}>${listing.price.toFixed(2)}</Text>
-                    <Text style={styles.listingNewPrice}>${listing.discountPrice.toFixed(2)}</Text>
+                ))}
               </View>
-                  <Text style={styles.listingTime}>⏰ Until {listing.availableUntil}</Text>
-                  </View>
+
+              <View style={styles.listingFooter}>
+                <View style={styles.listingPrice}>
+                  <Text style={styles.listingNewPrice}>
+                    ${listing.discountPrice.toFixed(2)}
+                  </Text>
+                </View>
+                <Text style={styles.listingTime}>
+                  ⏰ Until {listing.availableUntil}
+                </Text>
               </View>
-            </TouchableOpacity>
-          ))}
+            </View>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
-      ) : (
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapPlaceholderText}>📍 Map View</Text>
-          <Text style={styles.mapPlaceholderHint}>Map integration coming soon</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -649,9 +593,8 @@ function ListingDetailScreen({ route }) {
         </View>
 
         <View style={styles.detailPricing}>
-          <Text style={styles.detailOldPrice}>${listing.price.toFixed(2)}</Text>
           <Text style={styles.detailNewPrice}>${listing.discountPrice.toFixed(2)}</Text>
-                    </View>
+        </View>
 
         <View style={styles.detailInfo}>
           <Text style={styles.detailInfoText}>⏰ Available until {listing.availableUntil}</Text>
@@ -1015,7 +958,7 @@ function ProfileScreen() {
   const stats = {
     moneySaved: 156.50,
     mealsRescued: 24,
-    sustainabilityBadges: 3,
+    mealsDonated: 47,
   };
 
   const handleSignOut = () => {
@@ -1037,24 +980,28 @@ function ProfileScreen() {
         <View style={styles.profileAvatar}>
           <Text style={styles.profileAvatarText}>👤</Text>
       </View>
-        <Text style={styles.profileName}>{user?.name || 'User'}</Text>
+        <Text style={styles.profileName}>{user?.displayName || user?.name || 'User'}</Text>
         <Text style={styles.profileEmail}>{user?.email || ''}</Text>
       </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>${stats.moneySaved.toFixed(2)}</Text>
-          <Text style={styles.statLabel}>Money Saved</Text>
+          <View style={[styles.statCircle, styles.moneyCircle]}>
+            <Text style={styles.statCircleValue}>${stats.moneySaved.toFixed(0)}</Text>
+          </View>
+          <Text style={styles.statCircleLabel}>Money Saved</Text>
         </View>
-        <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.mealsRescued}</Text>
-          <Text style={styles.statLabel}>Meals Rescued</Text>
+          <View style={[styles.statCircle, styles.mealsCircle]}>
+            <Text style={styles.statCircleValue}>{stats.mealsRescued}</Text>
+          </View>
+          <Text style={styles.statCircleLabel}>Meals Rescued</Text>
         </View>
-        <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.sustainabilityBadges}</Text>
-          <Text style={styles.statLabel}>Badges</Text>
+          <View style={[styles.statCircle, styles.donatedCircle]}>
+            <Text style={styles.statCircleValue}>{stats.mealsDonated}</Text>
+          </View>
+          <Text style={styles.statCircleLabel}>Meals Donated</Text>
         </View>
       </View>
 
@@ -1128,10 +1075,6 @@ function ProfileScreen() {
             <Text style={styles.settingsArrow}>→</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingsItem}>
-            <Text style={styles.settingsItemText}>🔔 Notifications</Text>
-            <Text style={styles.settingsArrow}>→</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsItem}>
             <Text style={styles.settingsItemText}>💳 Payment Methods</Text>
             <Text style={styles.settingsArrow}>→</Text>
           </TouchableOpacity>
@@ -1154,7 +1097,6 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="SignIn" component={SignInScreen} />
       <AuthStack.Screen name="SignUp" component={SignUpScreen} />
-      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -1308,6 +1250,13 @@ const styles = StyleSheet.create({
   authForm: {
     width: '100%',
   },
+  createHeader: {
+    marginBottom: 48,
+    alignItems: 'flex-start',
+  },
+  firstInput: {
+    marginTop: 12,
+  },
   inputContainer: {
     marginBottom: 20,
   },
@@ -1316,6 +1265,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: 'red',
+    marginTop: 4,
   },
   input: {
     backgroundColor: '#fff', 
@@ -1589,12 +1543,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  listingOldPrice: {
-    fontSize: 14,
-    color: '#999',
-    textDecorationLine: 'line-through',
-    marginRight: 8,
-  },
   listingNewPrice: {
     fontSize: 18,
     fontWeight: '700',
@@ -1700,12 +1648,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  detailOldPrice: {
-    fontSize: 20,
-    color: '#999',
-    textDecorationLine: 'line-through',
-    marginRight: 12,
   },
   detailNewPrice: {
     fontSize: 32,
@@ -2043,25 +1985,43 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#e8e8e8',
+    justifyContent: 'space-around',
   },
   statItem: {
-    flex: 1,
     alignItems: 'center',
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 8,
+  statCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  statValue: {
-    fontSize: 24,
+  moneyCircle: {
+    backgroundColor: '#4CAF50',
+  },
+  mealsCircle: {
+    backgroundColor: '#FF9800',
+  },
+  donatedCircle: {
+    backgroundColor: '#2196F3',
+  },
+  statCircleValue: {
+    fontSize: 20,
     fontWeight: '800',
-    color: '#2e7d32',
-    marginBottom: 4,
+    color: '#fff',
   },
-  statLabel: {
-    fontSize: 14,
+  statCircleLabel: {
+    fontSize: 12,
     color: '#666',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   tabBar: {
     flexDirection: 'row',
