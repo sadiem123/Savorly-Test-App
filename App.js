@@ -105,11 +105,21 @@ function SignInScreen() {
   };
 
   return (
-    <ScrollView style={styles.authContainer} contentContainerStyle={styles.authContent}>
-      <View style={styles.authHeader}>
-        <Text style={styles.authTitle}>Welcome to Savorly!</Text>
-        <Text style={styles.authSubtitle}>Eat better, spend less, waste none.</Text>
-      </View>
+    <View style={styles.authContainer}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.authContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        contentInsetAdjustmentBehavior="automatic"
+        alwaysBounceVertical={true}
+        bounces={true}
+      >
+        <View style={styles.authHeader}>
+          <Text style={styles.authTitle}>Welcome to Savorly!</Text>
+          <Text style={styles.authSubtitle}>Eat better, spend less, waste none.</Text>
+        </View>
 
       <View style={styles.authForm}>
         <View style={styles.inputContainer}>
@@ -173,7 +183,8 @@ function SignInScreen() {
           <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
               </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -182,6 +193,8 @@ function SignUpScreen() {
   const { signUp } = useAuth();
   
   const [step, setStep] = React.useState(1);
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
   const [displayName, setDisplayName] = React.useState(''); // NEW STATE
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -192,8 +205,8 @@ function SignUpScreen() {
 
   const handleNext = () => {
     if (step === 1) {
-      // Updated validation to include Display Name
-      if (!displayName || !email || !password || !confirmPassword) {
+      // Updated validation to include First Name, Last Name, and Display Name
+      if (!firstName || !lastName || !displayName || !email || !password || !confirmPassword) {
         Alert.alert('Error', 'Please fill in all fields');
         return;
       }
@@ -225,9 +238,10 @@ function SignUpScreen() {
 
     setLoading(true);
     try {
-      // Pass displayName as `name` so ProfileScreen (which expects `name`) and
-      // other parts of the app will show the chosen display name.
+      // Pass firstName, lastName, and displayName to the auth service
       await signUp(email, password, {
+        firstName: firstName || '',
+        lastName: lastName || '',
         name: displayName || '',
         displayName: displayName || '',
       });
@@ -241,80 +255,118 @@ function SignUpScreen() {
 
   // --- Step 1 UI Update ---
   return (
-    <ScrollView style={styles.authContainer} contentContainerStyle={styles.authContent}>
-      <View style={styles.createHeader}>
-        <Text style={styles.authTitle}>Create Account</Text>
-      </View>
-
-      {step === 1 && (
-        <View style={styles.authForm}>
-          {/* NEW DISPLAY NAME FIELD */}
-          <View style={[styles.inputContainer, styles.firstInput]}>
-            <Text style={styles.inputLabel}>Display Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="How others will see you (e.g. Oski1868)"
-              placeholderTextColor="#999"
-              value={displayName}
-              onChangeText={setDisplayName}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Berkeley Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="your.email@berkeley.edu"
-              placeholderTextColor="#999"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError(''); // Clear error on typing
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            {emailError ? <Text style={styles.errorText}>⚠️ {emailError}</Text> : null}
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm your password"
-              placeholderTextColor="#999"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleNext}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Sign Up</Text>
-            )}
-          </TouchableOpacity>
+    <View style={styles.authContainer}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.authContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        contentInsetAdjustmentBehavior="automatic"
+        alwaysBounceVertical={true}
+        bounces={true}
+      >
+        <View style={styles.createHeader}>
+          <Text style={styles.authTitle}>Create Account</Text>
         </View>
-      )}
-      {/* ... Steps 2 and 3 ... */}
-    </ScrollView>
+
+        {step === 1 && (
+          <View style={styles.authForm}>
+            {/* NEW FIRST NAME FIELD */}
+            <View style={[styles.inputContainer, styles.firstInput]}>
+              <Text style={styles.inputLabel}>First Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your first name"
+                placeholderTextColor="#999"
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+
+            {/* NEW LAST NAME FIELD */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Last Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your last name"
+                placeholderTextColor="#999"
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
+
+            {/* NEW DISPLAY NAME FIELD */}
+            <View style={[styles.inputContainer]}>
+              <Text style={styles.inputLabel}>Display Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="How others will see you (e.g. Oski1868)"
+                placeholderTextColor="#999"
+                value={displayName}
+                onChangeText={setDisplayName}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Berkeley Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="your.email@berkeley.edu"
+                placeholderTextColor="#999"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError(''); // Clear error on typing
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              {emailError ? <Text style={styles.errorText}>⚠️ {emailError}</Text> : null}
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm your password"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              onPress={handleNext}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* Extra space to ensure scrolling */}
+            <View style={styles.scrollSpacer} />
+          </View>
+        )}
+        {/* ... Steps 2 and 3 ... */}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -339,7 +391,7 @@ function HomeScreen() {
       category: 'Sandwiches',
       dietaryTags: ['Vegetarian', 'Gluten Free'],
       serves: 1,
-      availableUntil: '2:00 PM',
+      availableTime: '1:00 PM - 2:00 PM',
       imageUrl: null,
     },
     {
@@ -352,7 +404,7 @@ function HomeScreen() {
       category: 'Italian',
       dietaryTags: ['Vegetarian'],
       serves: 4,
-      availableUntil: '1:00 PM',
+      availableTime: '12:00 PM - 1:00 PM',
       imageUrl: null,
     },
     {
@@ -365,7 +417,7 @@ function HomeScreen() {
       category: 'Healthy',
       dietaryTags: ['Vegan', 'Gluten Free'],
       serves: 1,
-      availableUntil: '3:00 PM',
+      availableTime: '2:00 PM - 3:00 PM',
       imageUrl: null,
     },
   ];
@@ -382,7 +434,7 @@ function HomeScreen() {
       category: 'Produce',
       dietaryTags: ['Vegan', 'Gluten Free'],
       serves: 4,
-      availableUntil: '6:00 PM',
+      availableTime: '5:00 PM - 6:00 PM',
       imageUrl: null,
     },
     {
@@ -395,7 +447,7 @@ function HomeScreen() {
       category: 'Bakery',
       dietaryTags: ['Vegetarian'],
       serves: 2,
-      availableUntil: '7:00 PM',
+      availableTime: '6:00 PM - 7:00 PM',
       imageUrl: null,
     },
   ];
@@ -514,7 +566,7 @@ function HomeScreen() {
                   </Text>
                 </View>
                 <Text style={styles.listingTime}>
-                  ⏰ Until {listing.availableUntil}
+                  ⏰ Pickup from {listing.availableTime}
                 </Text>
               </View>
             </View>
@@ -530,8 +582,95 @@ function ListingDetailScreen({ route }) {
   const { listingId } = route.params;
   const [isReserved, setIsReserved] = React.useState(false);
 
-  // Sample listing detail
-  const listing = {
+  // Get listing data from the combined listings
+  const mealsListings = [
+    {
+      id: 1,
+      type: 'meal',
+      restaurant: 'Campus Cafe',
+      name: 'Veggie Wrap',
+      description: 'Fresh vegetables wrapped in a whole wheat tortilla with hummus and greens.',
+      price: 8.99,
+      discountPrice: 6.29,
+      category: 'Sandwiches',
+      dietaryTags: ['Vegetarian', 'Gluten Free'],
+      serves: 1,
+      availableTime: '1:00 PM - 2:00 PM',
+      restaurantHours: 'Mon-Fri: 8am-8pm',
+      restaurantAddress: '123 University Ave, Berkeley',
+      restaurantPhone: '(555) 123-4567',
+    },
+    {
+      id: 2,
+      type: 'meal',
+      restaurant: 'Pizza Palace',
+      name: 'Large Pizza',
+      description: 'Large cheese pizza with fresh toppings.',
+      price: 18.99,
+      discountPrice: 9.50,
+      category: 'Italian',
+      dietaryTags: ['Vegetarian'],
+      serves: 4,
+      availableTime: '12:00 PM - 1:00 PM',
+      restaurantHours: 'Mon-Fri: 11am-10pm',
+      restaurantAddress: '456 College Ave, Berkeley',
+      restaurantPhone: '(555) 234-5678',
+    },
+    {
+      id: 3,
+      type: 'meal',
+      restaurant: 'Green Bowl',
+      name: 'Acai Bowl',
+      description: 'Refreshing acai bowl with fresh fruits and granola.',
+      price: 7.99,
+      discountPrice: 5.59,
+      category: 'Healthy',
+      dietaryTags: ['Vegan', 'Gluten Free'],
+      serves: 1,
+      availableTime: '2:00 PM - 3:00 PM',
+      restaurantHours: 'Mon-Fri: 7am-7pm',
+      restaurantAddress: '789 Student Center, Berkeley',
+      restaurantPhone: '(555) 345-6789',
+    },
+  ];
+
+  const marketListings = [
+    {
+      id: 101,
+      type: 'market',
+      restaurant: 'Campus Market',
+      name: 'Bag of Apples',
+      description: 'Fresh organic apples, perfect for snacking.',
+      price: 6.99,
+      discountPrice: 3.99,
+      category: 'Produce',
+      dietaryTags: ['Vegan', 'Gluten Free'],
+      serves: 4,
+      availableTime: '5:00 PM - 6:00 PM',
+      restaurantHours: 'Mon-Fri: 9am-9pm',
+      restaurantAddress: '321 Market St, Berkeley',
+      restaurantPhone: '(555) 456-7890',
+    },
+    {
+      id: 102,
+      type: 'market',
+      restaurant: 'Campus Market',
+      name: 'Whole Wheat Bread',
+      description: 'Freshly baked whole wheat bread loaf.',
+      price: 5.49,
+      discountPrice: 2.99,
+      category: 'Bakery',
+      dietaryTags: ['Vegetarian'],
+      serves: 2,
+      availableTime: '6:00 PM - 7:00 PM',
+      restaurantHours: 'Mon-Fri: 9am-9pm',
+      restaurantAddress: '321 Market St, Berkeley',
+      restaurantPhone: '(555) 456-7890',
+    },
+  ];
+
+  const allListings = [...mealsListings, ...marketListings];
+  const listing = allListings.find(l => l.id === listingId) || {
     id: listingId,
     restaurant: 'Campus Cafe',
     name: 'Veggie Wrap',
@@ -541,11 +680,19 @@ function ListingDetailScreen({ route }) {
     category: 'Sandwiches',
     dietaryTags: ['Vegetarian', 'Gluten Free'],
     serves: 1,
-    availableUntil: '2:00 PM',
+    availableTime: '1:00 PM - 2:00 PM',
     restaurantHours: 'Mon-Fri: 8am-8pm',
     restaurantAddress: '123 University Ave, Berkeley',
     restaurantPhone: '(555) 123-4567',
   };
+
+  // Extract the end time from the availableTime range
+  const getEndTime = (timeRange) => {
+    const parts = timeRange.split(' - ');
+    return parts[1] || timeRange; // Return the second part (end time) or the whole string if no dash
+  };
+
+  const availableUntil = getEndTime(listing.availableTime);
 
   const handleReserve = () => {
     Alert.alert(
@@ -597,7 +744,7 @@ function ListingDetailScreen({ route }) {
         </View>
 
         <View style={styles.detailInfo}>
-          <Text style={styles.detailInfoText}>⏰ Available until {listing.availableUntil}</Text>
+          <Text style={styles.detailInfoText}>⏰ Pickup until {availableUntil}</Text>
           <Text style={styles.detailInfoText}>👥 Serves {listing.serves}</Text>
                   </View>
 
@@ -979,9 +1126,15 @@ function ProfileScreen() {
       <View style={styles.profileHeader}>
         <View style={styles.profileAvatar}>
           <Text style={styles.profileAvatarText}>👤</Text>
-      </View>
-        <Text style={styles.profileName}>{user?.displayName || user?.name || 'User'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+        </View>
+        <View style={styles.profileNameContainer}>
+          <Text style={styles.profileFullName}>
+            {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : (user?.displayName || user?.name || 'User')}
+          </Text>
+          {user?.displayName && (user?.firstName || user?.lastName) && (
+            <Text style={styles.profileDisplayName}>{user.displayName}</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.statsCard}>
@@ -1215,7 +1368,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   loadingText: {
     marginTop: 16,
@@ -1226,11 +1379,15 @@ const styles = StyleSheet.create({
   // Auth Screens
   authContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
+  },
+  scrollView: {
+    flex: 1,
   },
   authContent: {
     padding: 20,
     paddingTop: 60,
+    paddingBottom: 100, // Reduced since we have scrollSpacer
   },
   authHeader: {
     marginBottom: 40,
@@ -1256,6 +1413,9 @@ const styles = StyleSheet.create({
   },
   firstInput: {
     marginTop: 12,
+  },
+  scrollSpacer: {
+    height: 200, // Extra space to ensure scrolling works
   },
   inputContainer: {
     marginBottom: 20,
@@ -1382,7 +1542,7 @@ const styles = StyleSheet.create({
   // Home Screen
   homeContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   homeHeader: {
     paddingTop: 60,
@@ -1575,7 +1735,7 @@ const styles = StyleSheet.create({
   // Listing Detail
   detailContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   detailHeader: {
     flexDirection: 'row',
@@ -1697,7 +1857,7 @@ const styles = StyleSheet.create({
   // Create Listing
   createContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   createHeader: {
     paddingTop: 60,
@@ -1781,7 +1941,7 @@ const styles = StyleSheet.create({
   // Messages
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   messagesHeader: {
     paddingTop: 60,
@@ -1860,7 +2020,7 @@ const styles = StyleSheet.create({
   },
   conversationContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   conversationHeaderView: {
     flexDirection: 'row',
@@ -1939,7 +2099,7 @@ const styles = StyleSheet.create({
   // Profile
   profileContainer: {
     flex: 1,
-    backgroundColor: '#f5fff5',
+    backgroundColor: '#e8f5e9',
   },
   profileHeader: {
     paddingTop: 60,
@@ -1967,6 +2127,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2e7d32',
     marginBottom: 4,
+  },
+  profileNameContainer: {
+    alignItems: 'center',
+  },
+  profileFullName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2e7d32',
+    marginBottom: 2,
+  },
+  profileDisplayName: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
   profileEmail: {
     fontSize: 14,
