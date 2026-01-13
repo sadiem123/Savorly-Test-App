@@ -1,0 +1,162 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper to check authentication
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: Berkeley email check (optional strictness)
+    function isBerkeleyEmail(email) {
+      return email.matches("^.*@berkeley\\.edu$");
+    }
+
+    // ---------------------------
+    // Users collection
+    // ---------------------------
+    // - Authenticated users can read user profiles
+    // - Users can create/update/delete only their own user document
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // Create: only owner, allow both student and vendor roles
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && isBerkeleyEmail(request.resource.data.email)
+        && (request.resource.data.role == 'student' || request.resource.data.role == 'vendor');
+
+      // Update: only owner, cannot change email/role/createdAt
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      // Delete: only owner
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---------------------------
+    // Vendors collection
+    // ---------------------------
+    // Vendors are publicly readable. Vendor documents are created during sign-up
+    // with userId matching the authenticated user. Only vendors can update their own profiles.
+    match /vendors/{vendorId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.auth.uid == vendorId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['userId','name','email'])
+        && request.resource.data.email == request.auth.token.email;
+
+      allow update: if isSignedIn()
+        && request.auth.uid == vendorId
+        && request.resource.data.userId == resource.data.userId;
+
+      allow delete: if false; // Vendors cannot delete their profiles
+
+      // Menu items subcollection
+      match /menuItems/{itemId} {
+        allow read: if true;
+
+        allow create: if isSignedIn()
+          && request.auth.uid == vendorId
+          && request.resource.data.keys().hasAll(['name','price']);
+
+        allow update: if isSignedIn()
+          && request.auth.uid == vendorId;
+
+        allow delete: if isSignedIn()
+          && request.auth.uid == vendorId;
+      }
+    }
+
+    // ---------------------------
+    // Orders collection
+    // ---------------------------
+    // Students can create orders and read their own orders.
+    // Vendors can read orders for their restaurant.
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.vendorId
+      );
+
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.studentId
+        && request.resource.data.keys().hasAll(['studentId','vendorId','itemName','orderStatus','createdAt']);
+
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.vendorId && 'orderStatus' in request.resource.data) ||
+        (request.auth.uid == resource.data.studentId)
+      );
+
+      allow delete: if false;
+    }
+
+    // ---------------------------
+    // Listings collection
+    // ---------------------------
+    // Listings are public-readable. Only the owner can create listings with
+    // ownerId equal to their uid, and only the owner can update/delete them.
+    match /listings/{listingId} {
+      allow read: if true;
+
+      // Create: owner must match auth uid and required fields present
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasAll(['ownerId','title'])
+        && request.resource.data.title is string
+        && (!('price' in request.resource.data) || (request.resource.data.price is number && request.resource.data.price >= 0));
+
+      // Update: only the owner, cannot change ownerId
+      allow update: if isSignedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (!('price' in request.resource.data) || (request.resource.data.price is number && request.resource.data.price >= 0));
+
+      // Delete: only the owner
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // ---------------------------
+    // Conversations and Messages
+    // ---------------------------
+    // Conversations store participant list in `participants` array of uids.
+    match /conversations/{convId} {
+      // Create: must include participants array with creator
+      allow create: if isSignedIn()
+        && resource.data.participants.size() >= 1
+        && request.auth.uid in request.resource.data.participants;
+
+      // Read: only participants
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow update: if false;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        // Use parent conversation to validate sender is a participant
+        allow create: if isSignedIn()
+          && request.auth.uid == request.resource.data.senderId
+          && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants);
+
+        // Read: only participants of parent conversation
+        allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+
+        // Prevent editing or deleting existing messages from clients
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------------------------
+    // Default: deny everything else
+    // ---------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
